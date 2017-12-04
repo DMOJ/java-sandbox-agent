@@ -12,11 +12,13 @@ public class SubmissionAgent {
     public static void premain(String argv, Instrumentation inst) throws UnsupportedEncodingException {
         boolean unicode = false;
         boolean noBigMath = false;
+        boolean noBuf = false;
         String policy = null;
         if (argv != null)
             for (String opt : argv.split(",")) {
                 if (opt.equals("unicode")) unicode = true;
                 if (opt.equals("nobigmath")) noBigMath = true;
+                if (opt.equals("nobuf")) noBuf = true;
 
                 // Split on "policy:" so that paths like R:/tmp/security.policy don't get processed incorrectly
                 if (opt.startsWith("policy:")) policy = opt.split("policy:")[1];
@@ -56,15 +58,15 @@ public class SubmissionAgent {
         // our output in that case.
         // See <https://github.com/DMOJ/judge/issues/28>
         // Both branches require the setIO and writeFileDescriptor permissions.
-        if (System.console() == null)
-            // Swap System.out for a faster alternative.
-            System.setOut(new UnsafePrintStream(new FileOutputStream(FileDescriptor.out), unicode));
-        else
+        if (noBuf)
             // Create output PrintStream set to autoflush:
             // > the output buffer will be flushed whenever a byte array is written, one of the println
             // > methods is invoked, or a newline character or byte ('\n') is written
             // This should be sufficient for interactive problems.
             System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true));
+        else
+            // Swap System.out for a faster alternative.
+            System.setOut(new UnsafePrintStream(new FileOutputStream(FileDescriptor.out), unicode));
 
         selfThread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             @Override
