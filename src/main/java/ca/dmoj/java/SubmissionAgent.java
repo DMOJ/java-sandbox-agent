@@ -14,7 +14,8 @@ public class SubmissionAgent {
         boolean noBigMath = false;
         boolean noBuf = false;
         String policy = null;
-        if (argv != null)
+
+        if (argv != null) {
             for (String opt : argv.split(",")) {
                 if (opt.equals("unicode")) unicode = true;
                 if (opt.equals("nobigmath")) noBigMath = true;
@@ -23,13 +24,14 @@ public class SubmissionAgent {
                 // Split on "policy:" so that paths like R:/tmp/security.policy don't get processed incorrectly
                 if (opt.startsWith("policy:")) policy = opt.split("policy:")[1];
             }
+        }
 
         if (policy == null) throw new IllegalStateException("must specify policy file");
         if (!new File(policy).exists()) throw new IllegalStateException("policy file does not exist: " + policy);
 
         final Thread selfThread = Thread.currentThread();
 
-        if (noBigMath)
+        if (noBigMath) {
             inst.addTransformer(new ClassFileTransformer() {
                 @Override
                 public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
@@ -47,31 +49,28 @@ public class SubmissionAgent {
                     if (disallowed != null) {
                         selfThread.getUncaughtExceptionHandler().uncaughtException(selfThread, disallowed);
                     }
+
                     // Don't actually retransform anything
                     return classfileBuffer;
                 }
             });
+        }
 
-        // System.console() is not-null if both the input and output streams are connected to a terminal. Specifically,
-        // > isatty(fileno(stdin)) && isatty(fileno(stdout))
-        // If we are connected to a pty, it's because we're doing interactive grading - we shouldn't be buffering
-        // our output in that case.
-        // See <https://github.com/DMOJ/judge/issues/28>
-        // Both branches require the setIO and writeFileDescriptor permissions.
-        if (noBuf)
+        if (noBuf) {
             // Create output PrintStream set to autoflush:
             // > the output buffer will be flushed whenever a byte array is written, one of the println
             // > methods is invoked, or a newline character or byte ('\n') is written
             // This should be sufficient for interactive problems.
             System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true));
-        else
+        } else {
             // Swap System.out for a faster alternative.
             System.setOut(new UnsafePrintStream(new FileOutputStream(FileDescriptor.out), unicode));
+        }
 
         selfThread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                lastError = e;
+            public void uncaughtException(Thread thread, Throwable error) {
+                lastError = error;
                 System.exit(1);
             }
         });
