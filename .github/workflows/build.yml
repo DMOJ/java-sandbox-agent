@@ -1,4 +1,4 @@
-name: Java Sandbox Agent
+name: build
 on: [push, pull_request]
 jobs:
   build:
