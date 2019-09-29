@@ -1,4 +1,4 @@
-# java-sandbox-agent [![Build Status](https://ci.dmoj.ca/job/dmoj-java-sandbox/badge/icon)](https://ci.dmoj.ca/job/dmoj-java-sandbox/)
+# java-sandbox-agent [![Build Status](https://github.com/DMOJ/java-sandbox-agent/workflows/build/badge.svg)](https://github.com/DMOJ/java-sandbox-agent/actions/)
 Policy-based Java sandbox with instrumentation support for online judges.
 
 It implements:
