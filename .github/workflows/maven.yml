@@ -11,3 +11,8 @@ jobs:
         java-version: 1.7
     - name: Build with Maven
       run: mvn package --file pom.xml
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@master
+      with:
+        name: java-sandbox-agent.jar
+        path: target/java_sandbox.jar
