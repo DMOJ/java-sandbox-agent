@@ -89,26 +89,8 @@ public class SubmissionAgent {
     }
 
     private static void dumpExceptionAndExit(Throwable exception) {
-        try {
-            // Use a FileOutputStream instead of a File; otherwise, if the user.dir property permission
-            // is given by a policy file, it could potentially allow malicious submissions to change the
-            // cwd and have the state file written anywhere.
-            // FileOutputStream ignores the user.dir property when resolving paths.
-            // TODO: not a real concern, but this could be made to use the codebase path as a base for
-            // an absolute path.
-            PrintStream state = new PrintStream(new BufferedOutputStream(new FileOutputStream("state")));
-            if (exception != null) {
-                state.println(exception.getClass().getName());
-            } else {
-                // End with ! in the event that some sketchy user-defined exception is ever called OK;
-                // ! is an invalid character in class names.
-                state.println("OK!");
-            }
-            state.close();
-        } catch (FileNotFoundException ignored) {
-            // state file won't not exist, "abnormal termination" on the Python side
-        }
-
+        System.err.print("7257b50d-e37a-4664-b1a5-b1340b4206c0: ");
+        exception.printStackTrace();
         System.exit(1);
     }
 }

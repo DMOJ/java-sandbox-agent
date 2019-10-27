@@ -17,8 +17,6 @@ To run a class `Submission` with agent and policy stored in `/code`, the followi
 $ java -client -javaagent:/code/java-sandbox-agent.jar=policy:/code/policy[,option ...] Submission
 ```
 
-After execution, exit state will be written to a `state` file in the same directory as `Submission.class`, containing the name of the exiting exception, or `OK!` if there was none.
-
 Supported fields for the `option` list are:
 
 * `nobigmath` &mdash; disables `BigInteger` and `BigDecimal`, raising [appropriate exceptions](https://github.com/DMOJ/java-sandbox-agent/blob/master/src/main/java/ca/dmoj/java/BigIntegerDisallowedException.java) if they are used
