@@ -7,8 +7,6 @@ import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
 
 public class SubmissionAgent {
-    private static Throwable lastError;
-
     public static void premain(String argv, Instrumentation inst) throws UnsupportedEncodingException {
         boolean unicode = false;
         boolean noBigMath = false;
@@ -37,18 +35,18 @@ public class SubmissionAgent {
                 public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
                                         ProtectionDomain protectionDomain, byte[] classfileBuffer)
                                         throws IllegalClassFormatException {
-                    RuntimeException disallowed = null;
+                    if (className == null) return classfileBuffer;
 
+                    RuntimeException disallowed = null;
                     // If the class ever loaded it's because a submission used it
-                    if (className.equals("java/math/BigInteger")) {
+                    if (className.startsWith("java/math/BigInteger") ||
+                        className.startsWith("java/math/MutableBigInteger")) {
                         disallowed = new BigIntegerDisallowedException();
-                    } else if (className.equals("java/math/BigDecimal")) {
+                    } else if (className.startsWith("java/math/BigDecimal")) {
                         disallowed = new BigDecimalDisallowedException();
                     }
 
-                    if (disallowed != null) {
-                        selfThread.getUncaughtExceptionHandler().uncaughtException(selfThread, disallowed);
-                    }
+                    if (disallowed != null) dumpExceptionAndExit(disallowed);
 
                     // Don't actually retransform anything
                     return classfileBuffer;
@@ -70,8 +68,7 @@ public class SubmissionAgent {
         selfThread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread thread, Throwable error) {
-                lastError = error;
-                System.exit(1);
+                dumpExceptionAndExit(error);
             }
         });
 
@@ -82,26 +79,6 @@ public class SubmissionAgent {
             public void run() {
                 System.out.flush();
                 System.err.flush();
-
-                try {
-                    // Use a FileOutputStream instead of a File; otherwise, if the user.dir property permission
-                    // is given by a policy file, it could potentially allow malicious submissions to change the
-                    // cwd and have the state file written anywhere.
-                    // FileOutputStream ignores the user.dir property when resolving paths.
-                    // TODO: not a real concern, but this could be made to use the codebase path as a base for
-                    // an absolute path.
-                    PrintStream state = new PrintStream(new BufferedOutputStream(new FileOutputStream("state")));
-                    if (lastError != null) {
-                        state.println(lastError.getClass().getName());
-                    } else {
-                        // End with ! in the event that some sketchy user-defined exception is ever called OK;
-                        // ! is an invalid character in class names.
-                        state.println("OK!");
-                    }
-                    state.close();
-                } catch (FileNotFoundException ignored) {
-                    // state file won't not exist, "abnormal termination" on the Python side
-                }
             }
         }));
 
@@ -109,5 +86,29 @@ public class SubmissionAgent {
         // writeFileDescriptor to all user submissions.
         System.setProperty("java.security.policy", policy);
         System.setSecurityManager(new SecurityManager());
+    }
+
+    private static void dumpExceptionAndExit(Throwable exception) {
+        try {
+            // Use a FileOutputStream instead of a File; otherwise, if the user.dir property permission
+            // is given by a policy file, it could potentially allow malicious submissions to change the
+            // cwd and have the state file written anywhere.
+            // FileOutputStream ignores the user.dir property when resolving paths.
+            // TODO: not a real concern, but this could be made to use the codebase path as a base for
+            // an absolute path.
+            PrintStream state = new PrintStream(new BufferedOutputStream(new FileOutputStream("state")));
+            if (exception != null) {
+                state.println(exception.getClass().getName());
+            } else {
+                // End with ! in the event that some sketchy user-defined exception is ever called OK;
+                // ! is an invalid character in class names.
+                state.println("OK!");
+            }
+            state.close();
+        } catch (FileNotFoundException ignored) {
+            // state file won't not exist, "abnormal termination" on the Python side
+        }
+
+        System.exit(1);
     }
 }
