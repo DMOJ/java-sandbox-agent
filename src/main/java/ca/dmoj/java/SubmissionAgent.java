@@ -11,21 +11,14 @@ public class SubmissionAgent {
         boolean unicode = false;
         boolean noBigMath = false;
         boolean noBuf = false;
-        String policy = null;
 
         if (argv != null) {
             for (String opt : argv.split(",")) {
                 if (opt.equals("unicode")) unicode = true;
                 if (opt.equals("nobigmath")) noBigMath = true;
                 if (opt.equals("nobuf")) noBuf = true;
-
-                // Split on "policy:" so that paths like R:/tmp/security.policy don't get processed incorrectly
-                if (opt.startsWith("policy:")) policy = opt.split("policy:")[1];
             }
         }
-
-        if (policy == null) throw new IllegalStateException("must specify policy file");
-        if (!new File(policy).exists()) throw new IllegalStateException("policy file does not exist: " + policy);
 
         final Thread selfThread = Thread.currentThread();
 
@@ -81,11 +74,6 @@ public class SubmissionAgent {
                 System.err.flush();
             }
         }));
-
-        // Set security policy here so that we don't need to grant submissions addShutdownHook, setIO and
-        // writeFileDescriptor to all user submissions.
-        System.setProperty("java.security.policy", policy);
-        System.setSecurityManager(new SecurityManager());
     }
 
     private static void dumpExceptionAndExit(Throwable exception) {
