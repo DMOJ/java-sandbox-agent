@@ -1,19 +1,19 @@
 package ca.dmoj.java;
 
 import java.io.*;
-import java.lang.instrument.ClassFileTransformer;
-import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
-import java.security.ProtectionDomain;
+import java.util.ArrayList;
 
 public class SubmissionAgent {
     public static void premain(String argv, Instrumentation inst) throws UnsupportedEncodingException {
+        boolean unsafe = false;
         boolean unicode = false;
         boolean noBigMath = false;
         boolean noBuf = false;
 
         if (argv != null) {
             for (String opt : argv.split(",")) {
+                if (opt.equals("unsafe")) unsafe = true;
                 if (opt.equals("unicode")) unicode = true;
                 if (opt.equals("nobigmath")) noBigMath = true;
                 if (opt.equals("nobuf")) noBuf = true;
@@ -22,30 +22,17 @@ public class SubmissionAgent {
 
         final Thread selfThread = Thread.currentThread();
 
-        if (noBigMath) {
-            inst.addTransformer(new ClassFileTransformer() {
-                @Override
-                public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
-                                        ProtectionDomain protectionDomain, byte[] classfileBuffer)
-                                        throws IllegalClassFormatException {
-                    if (className == null) return classfileBuffer;
-
-                    RuntimeException disallowed = null;
-                    // If the class ever loaded it's because a submission used it
-                    if (className.startsWith("java/math/BigInteger") ||
-                        className.startsWith("java/math/MutableBigInteger")) {
-                        disallowed = new BigIntegerDisallowedException();
-                    } else if (className.startsWith("java/math/BigDecimal")) {
-                        disallowed = new BigDecimalDisallowedException();
-                    }
-
-                    if (disallowed != null) dumpExceptionAndExit(disallowed);
-
-                    // Don't actually retransform anything
-                    return classfileBuffer;
-                }
-            });
+        ArrayList<DisallowedClassRule> disallowedClassRules = new ArrayList<>();
+        if (!unsafe) {
+            disallowedClassRules.add(new DisallowedClassRule("sun/reflect/Unsafe", UnsafeDisallowedException::new));
+            disallowedClassRules.add(new DisallowedClassRule("sun/misc/Unsafe", UnsafeDisallowedException::new));
         }
+        if (noBigMath) {
+            disallowedClassRules.add(new DisallowedClassRule("java/math/BigInteger", BigIntegerDisallowedException::new));
+            disallowedClassRules.add(new DisallowedClassRule("java/math/MutableBigInteger", BigIntegerDisallowedException::new));
+            disallowedClassRules.add(new DisallowedClassRule("java/math/BigDecimal", BigDecimalDisallowedException::new));
+        }
+        inst.addTransformer(new DisallowedClassesClassFileTransformer(disallowedClassRules.toArray(new DisallowedClassRule[0])));
 
         if (noBuf) {
             // Create output PrintStream set to autoflush:
@@ -61,7 +48,7 @@ public class SubmissionAgent {
         selfThread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread thread, Throwable error) {
-                dumpExceptionAndExit(error);
+                ExceptionHandler.dumpExceptionAndExit(error);
             }
         });
 
@@ -74,11 +61,5 @@ public class SubmissionAgent {
                 System.err.flush();
             }
         }));
-    }
-
-    private static void dumpExceptionAndExit(Throwable exception) {
-        System.err.print("7257b50d-e37a-4664-b1a5-b1340b4206c0: ");
-        exception.printStackTrace();
-        System.exit(1);
     }
 }
