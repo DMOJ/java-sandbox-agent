@@ -21,3 +21,4 @@ Supported fields for the `option` list are:
 * `nobigmath` &mdash; disables `BigInteger` and `BigDecimal`, raising [appropriate exceptions](https://github.com/DMOJ/java-sandbox-agent/blob/master/src/main/java/ca/dmoj/java/BigIntegerDisallowedException.java) if they are used
 * `unicode` &mdash; encodes `System.out` as UTF-8 instead of ASCII, sacrificing performance for Unicode support
 * `nobuf` &mdash; sets `System.out` as being line-buffered, for interactive problems
+* `unsafe` &mdash; enables `sun.misc.Unsafe`, which is disabled by default
